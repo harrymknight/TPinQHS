@@ -1,5 +1,4 @@
 from setuptools import setup, Extension
-import numpy as np
 
 wavefunc_ext = Extension(
     name="wavefunc",
