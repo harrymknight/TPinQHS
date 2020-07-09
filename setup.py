@@ -1,4 +1,9 @@
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
+import numpy as np
+
+wavefunc_ext = Extension(
+    name="wavefunc",
+    sources=["ode.c", "brent.c", "Pywavefunc.c"])
 
 def main():
     setup(name="wavefunc",
@@ -6,8 +11,7 @@ def main():
           description="Python interface for routines which solve for properties of wavefunctions",
           author="harry knight",
           author_email="harry.knight@hotmail.co.uk",
-          ext_modules=[Extension("wavefunc", ["ode.c", "brent.c", "pwavefuncv2.c"],
-          include_dirs=['/home/harry/OneDrivePersonal/Interactive_QHE', '/home/harry/OneDrivePersonal/Interactive_QHE/.qhevenv/lib/python3.7/site-packages/numpy/core/include/numpy'])])
+          ext_modules=wavefunc_ext)
 
 if __name__ == "__main__":
     main()
