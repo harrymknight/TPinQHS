@@ -96,7 +96,6 @@ def plot_func(hoverData, func, value, grad):
     if value and toggle['display'] == 'block':
         spacing = (10+0.7*x_0)/dpoints
         x_expectation = (sum(i*j*spacing for i, j in zip(wavefunc, x_k)))
-        print(x_expectation)
         fig = fig.add_shape(
         dict(
             type="line",
