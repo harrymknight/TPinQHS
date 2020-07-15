@@ -2,10 +2,11 @@
 #include <Python.h>
 #include <math.h>
 #include <stdbool.h>
-#include <ndarraytypes.h>
-#include <ndarrayobject.h>
+#include <numpy/ndarraytypes.h>
+#include <numpy/ndarrayobject.h>
 #include "brent.h"
 #include "ode.h"
+#include "capsule.h"
 
 //For ode subroutine
 const int neqn;
@@ -24,8 +25,10 @@ double E;
 double V;
 double x_0; //Cyclotron orbit centre
 int level;
+
 double temp;
-Py_ssize_t points;
+int dpoints;
+
 
 double potential(double x_0, const double grad)
 {
@@ -158,18 +161,15 @@ get_eigenvalues(PyObject *self, PyObject *args)
     int i;
     int j;
 
-    int bflag = 1;
-    Py_buffer viewx_k;
-    PyObject_GetBuffer(objx_k, &viewx_k, bflag);
-    double *x_k = viewx_k.buf;
-    int points = PyLong_AsLong(PyLong_FromSsize_t(viewx_k.len))/PyLong_AsLong(PyLong_FromSsize_t(viewx_k.itemsize));
-    double *eigenvalues = malloc(sizeof(double)*points);
+    int size = PyArray_SIZE(objx_k);
+    double *x_k = PyArray_DATA(objx_k);
+    double *eigenvalues = malloc(sizeof(double)*size);
 
     //solving for eigenvalues
     double a;
     double b;
     double past_E = 0;
-    for(i=0; i<points; i++)
+    for(i=0; i<size; i++)
     {
         //Solving for eigenvalue corresponding to cyclotron orbit buffer[i]
         a = 0;
@@ -200,21 +200,26 @@ get_eigenvalues(PyObject *self, PyObject *args)
         eigenvalues[i] = zero(a, b, 2.22e-16, abserr, try_eigenvalue, dpsi_dx, x, xout, potential(x_k[i], grad), x_k[i], wfgrad, y, yp, neqn, relerr, abserr, &iflag, work, iwork);
         past_E = (eigenvalues[i] - 1) > 0 ? : 0;
     }
-    npy_intp const dims[1] = {points};
-    PyObject *Objeigenvalues = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64, eigenvalues);
-    return Objeigenvalues;
+    npy_intp const dims[1] = {size};
+    PyObject *objeigenvalues = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64, eigenvalues);
+    PyObject *capeigenvalues = PyCapsule_New(eigenvalues, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) objeigenvalues, capeigenvalues);    
+    return objeigenvalues;
 }
 
 static PyObject *
 get_wavefunc(PyObject *self, PyObject *args)
 {
-    Py_ssize_t points;
-    if (!PyArg_ParseTuple(args, "dddin", &x_0, &E, &temp, &level, &points))
+    if (!PyArg_ParseTuple(args, "dddin", &x_0, &E, &temp, &level, &dpoints))
         return NULL;
     const double grad = temp;
 
-    PyObject *yy = PyList_New(points);
-    double *cyy = malloc(sizeof(double)*points);
+    typedef struct {
+        double x;
+        double y;
+    } Wavefunc;
+
+    Wavefunc wf[dpoints];
 
     if(level)
     {
@@ -240,7 +245,6 @@ get_wavefunc(PyObject *self, PyObject *args)
 
     //loop indices
     int i = 0;
-    PyObject *ip;
 
     double xmax;
     double interval;
@@ -258,87 +262,83 @@ get_wavefunc(PyObject *self, PyObject *args)
         interval = xmax - *x;
         wfgrad = temp;
     }
-    PyObject *cpoints = PyLong_FromSsize_t(points);
-    double spacing = interval/(PyLong_AsUnsignedLongMask(cpoints)-1);
+    double spacing = interval/((dpoints-1));
     xout = *x;
-    cyy[0] = 0;
+    wf[0].y = 0;
     y[0] = 0;
     y[1] = wfgrad;
     double sum;
     if(x_0 < 0)
     {
-        for(i=points-1;i>-1;i--)
+        for(i=dpoints-1;i>-1;i--)
         {
+            wf[i].x = xout;
             dpsi_dx(*x, y, yp, E, V);
             xout -= spacing;
             iflag = 1;
             ode(dpsi_dx, E, potential(x_0, grad), neqn, y, x, xout, relerr, abserr, &iflag, work, iwork);
             sum += y[0]*y[0]*spacing;
-            cyy[i] = y[0];
+            wf[i].y = y[0];
         }
     }
     else
     {
-        for(i=1;i<points;i++)
+        for(i=0;i<dpoints;i++)
         {
+            wf[i].x = xout;
             dpsi_dx(*x, y, yp, E, V);
             xout += spacing;
             iflag = 1;
             ode(dpsi_dx, E, potential(x_0, grad), neqn, y, x, xout, relerr, abserr, &iflag, work, iwork);
             sum += y[0]*y[0]*spacing;
-            cyy[i] = y[0];
+            wf[i].y = y[0];
         }
     }
     double _sum = 1/sum;
     _sum = sqrt(_sum);
-    PyObject *yi;
-    for(i=0;i<points;i++)
+    for(i=0;i<dpoints;i++)
     {
-        ip = PyLong_FromLong(i);
-        yi = PyFloat_FromDouble(cyy[i]*_sum);
-        PyList_SET_ITEM(yy, PyLong_AsSize_t(ip), yi);
+        wf[i].y *= _sum;
     }
-    return yy;
+    double *flatwf = malloc(sizeof(double)*(2*dpoints));
+    for(i=0;i<2*dpoints;i+=2)
+    {
+        flatwf[i] = wf[i/2].x;
+        flatwf[i+1] = wf[i/2].y;
+    }
+    npy_intp const dims[] = {dpoints};
+    PyObject *temp;
+    PyArray_Descr *descr;
+    temp = Py_BuildValue("[(s, s), (s, s)]", "x", "f8", "y", "f8");
+    PyArray_DescrConverter(temp, &descr);
+    Py_DECREF(temp);
+    PyObject *objwf = PyArray_NewFromDescr(&PyArray_Type, descr, 1, dims, NULL, flatwf, NPY_ARRAY_CARRAY, NULL);
+    PyObject *capwf = PyCapsule_New(flatwf, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) objwf, capwf);
+    return objwf;
 }
 
 static PyObject *
 get_x_expectation(PyObject *self, PyObject *args)
 {
-    if (!PyArg_ParseTuple(args, "dddin", &x_0, &E, &temp, &level, &points))
+    PyObject *objwf;
+    if (!PyArg_ParseTuple(args, "O", &objwf))
         return NULL;
 
-    PyObject *wfargs = Py_BuildValue("dddin", x_0, E, temp, level, points);
-    PyObject *objwf = get_wavefunc(objwf, wfargs);
+    PyObject *objwfx, *objwfy;
+    objwfx = PyArray_GetField((PyArrayObject *) objwf, PyArray_DescrFromType(NPY_FLOAT64), 0);
+    objwfy = PyArray_GetField((PyArrayObject *) objwf, PyArray_DescrFromType(NPY_FLOAT64), 8);
 
-    int bflag = 1;
-    Py_buffer viewwf;
-    PyObject_GetBuffer(objwf, &viewwf, bflag);
-    double *wavefunc = viewwf.buf;
-
-    double x[1];
-    double xmax;
-    double interval;
-    if (x_0 < 0)
-    {
-        *x = 5 - (x_0 * 0.35);
-        xmax = -5 - x_0;
-        interval = *x - xmax;
-    }
-    else
-    {
-        *x = -(x_0 * 0.35) - 5;
-        xmax = 5 - x_0;
-        interval = xmax - *x;
-    }
-    PyObject *cpoints = PyLong_FromSsize_t(points);
-    double spacing = interval/(PyLong_AsUnsignedLongMask(cpoints)-1);
     int i;
+    int size = PyArray_SIZE(objwf);
+    double *iwfy, *iwfx0, *iwfx1;
     double sum = 0;
-    for(i=0;i<points;i++)
+    for(i=1;i<size;i++)
     {
-        printf("%f\n", wavefunc[i]);
-        *x += spacing;
-        sum += wavefunc[i] * *x *spacing;
+        iwfy = PyArray_GETPTR1((PyArrayObject *) objwfy, i);
+        iwfx0 = PyArray_GETPTR1((PyArrayObject *) objwfx, i-1);
+        iwfx1 = PyArray_GETPTR1((PyArrayObject *) objwfx, i);
+        sum += (*iwfy) * (*iwfy) * (*iwfx1) * (*iwfx1-*iwfx0);
     }
     return PyFloat_FromDouble(sum);
 }

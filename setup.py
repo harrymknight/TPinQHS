@@ -3,9 +3,8 @@ import numpy as np
 
 wavefunc_ext = Extension(
     name="wavefunc",
-    sources=["ode.c", "brent.c", "pywavefunc.c"],
-    include_dirs=[np.get_include()] 
-)
+    sources=["ode.c", "brent.c", "capsule.c", "pywavefunc.c"],
+    include_dirs=[np.get_include()])
 
 def main():
     setup(name="wavefunc",
@@ -13,7 +12,13 @@ def main():
           description="Python interface for routines which solve for properties of wavefunctions",
           author="harry knight",
           author_email="harry.knight@hotmail.co.uk",
-          ext_modules=[wavefunc_ext])
+          ext_modules=[wavefunc_ext],
+          install_requires=[
+              'dash>=1.13.4',
+              'dash-bootstrap-components>=0.10.3',
+              'pandas>=1.0.5',
+              'numpy>=1.19.0'
+          ])
 
 if __name__ == "__main__":
     main()
