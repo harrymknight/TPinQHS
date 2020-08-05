@@ -89,8 +89,8 @@ get_eigenvalue(PyObject *self, PyObject *args)
     double yp[neqn];
     double x[1];
     double xout = 0;
-    const double relerr = 1e-5;
-    const double abserr = 1e-6;
+    const double relerr = 1e-6;
+    const double abserr = 1e-7;
     int iflag = 1;
     double work[100 + 21 * neqn];
     int iwork[5];
@@ -151,8 +151,8 @@ get_eigenvalues(PyObject *self, PyObject *args)
     double yp[neqn];
     double x[1];
     double xout = 0;
-    const double relerr = 1e-5;
-    const double abserr = 1e-6;
+    const double relerr = 1e-6;
+    const double abserr = 1e-7;
     int iflag = 1;
     double work[100 + 21 * neqn];
     int iwork[5];
@@ -237,8 +237,8 @@ get_wavefunc(PyObject *self, PyObject *args)
     double yp[neqn];
     double x[1];
     double xout = 0;
-    const double relerr = 1e-5;
-    const double abserr = 1e-6;
+    const double relerr = 1e-6;
+    const double abserr = 1e-7;
     int iflag = 1;
     double work[100 + 21 * neqn];
     int iwork[5];
@@ -300,6 +300,10 @@ get_wavefunc(PyObject *self, PyObject *args)
     {
         wf[i].y *= _sum;
     }
+    /* Ensure that the ends of the wavefunction are zero.
+    The routine which the solves the 2nd order ODE interpolates from the end point*/
+    wf[0].y = 0;
+    wf[dpoints-1].y = 0;
     double *flatwf = malloc(sizeof(double)*(2*dpoints));
     for(i=0;i<2*dpoints;i+=2)
     {
@@ -331,14 +335,17 @@ get_x_expectation(PyObject *self, PyObject *args)
 
     int i;
     int size = PyArray_SIZE(objwf);
-    double *iwfy, *iwfx0, *iwfx1;
+    double *iwfy, *iwfx;
     double sum = 0;
+    double interval;
+    double *lower = PyArray_GETPTR1((PyArrayObject *) objwfx, 0);
+    double *upper = PyArray_GETPTR1((PyArrayObject *) objwfx, 1);
+    interval = *upper - *lower;
     for(i=1;i<size;i++)
     {
         iwfy = PyArray_GETPTR1((PyArrayObject *) objwfy, i);
-        iwfx0 = PyArray_GETPTR1((PyArrayObject *) objwfx, i-1);
-        iwfx1 = PyArray_GETPTR1((PyArrayObject *) objwfx, i);
-        sum += (*iwfy) * (*iwfy) * (*iwfx1) * (*iwfx1-*iwfx0);
+        iwfx = PyArray_GETPTR1((PyArrayObject *) objwfx, i);
+        sum += (*iwfy) * (*iwfy) * (*iwfx) * interval;
     }
     return PyFloat_FromDouble(sum);
 }
