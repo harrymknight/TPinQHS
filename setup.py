@@ -16,6 +16,7 @@ def main():
           install_requires=[
               'dash>=1.13.4',
               'dash-bootstrap-components>=0.10.3',
+              'dash-defer-js-import',
               'pandas>=1.0.5',
               'numpy>=1.19.0'
           ])
