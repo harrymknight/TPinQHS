@@ -17,8 +17,8 @@ function squircle (radius, npoints, a, b) {
         coords.x.push(x);
         coords.y.push(y);
     }
-    for (var [x, y] of zip(xpoints, ypoints)) {
-        coords.x.push(-x);
+    for (var [x, y] of zip(xpoints, ypoints).reverse()) {
+        coords.x.push(x);
         coords.y.push(-y);
     }
     return coords;

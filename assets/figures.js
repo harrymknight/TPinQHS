@@ -362,6 +362,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                             color: "Black"
                         },
                     },
+                    hovermode: 'closest',
                     height: 600,
                     width: 600,
                 }
