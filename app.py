@@ -408,8 +408,7 @@ def update_wavefunc_graph(fig_dict, selected_grad):
     eigenvalue = fig_dict['data'][0]['y'][xpoints//2]
     x_0 = fig_dict['data'][0]['x'][xpoints//2]
 
-    initial_wavefunc = wf.get_wavefunc(
-        x_0, eigenvalue, selected_grad, 0, xpoints)
+    initial_wavefunc = wf.get_wavefunc(x_0, eigenvalue, selected_grad, 0, xpoints)
     wavefunc_fig = go.Figure(go.Scatter(
         x=initial_wavefunc['x'],
         y=initial_wavefunc['y'],
