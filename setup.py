@@ -3,7 +3,7 @@ import numpy as np
 
 wavefunc_ext = Extension(
     name="wavefunc",
-    sources=["ode.c", "brent.c", "capsule.c", "pywavefunc.c"],
+    sources=["wavefunc/ode.c", "wavefunc/brent.c", "wavefunc/capsule.c", "wavefunc/pywavefunc.c"],
     include_dirs=[np.get_include()])
 
 def main():
