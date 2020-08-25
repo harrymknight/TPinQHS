@@ -461,8 +461,7 @@ def pass_wavefunc_hoverData(hoverData, selected_grad):
     x_0 = hoverData['points'][0]['x']
     eigenvalue = hoverData['points'][0]['y']
     level = hoverData['points'][0]['curveNumber']-2
-    wavefuncData = wf.get_wavefunc(
-        x_0, eigenvalue, selected_grad, level, xpoints)
+    wavefuncData = wf.get_wavefunc(x_0, eigenvalue, selected_grad, level, xpoints)
     return dict(
         x=wavefuncData['x'].tolist(),
         y=wavefuncData['y'].tolist(),
