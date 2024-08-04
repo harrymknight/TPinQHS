@@ -25,7 +25,6 @@ thermopower_text = open(os.path.join(text_path, "thermopower.md"), "r").read()
 cases_text = open(os.path.join(text_path, "cases.md"), "r").read()
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-mathjax_script = dji.Import(src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-MML-AM_CHTML")
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -61,19 +60,20 @@ app.index_string = """
 
 app.layout = html.Div(
     [
-        dcc.Markdown(introduction_text),
-        dcc.Markdown(edgevsbulk_text),
-        dcc.Markdown(thermopower_text),
-        dcc.Markdown(cases_text),
+        dcc.Markdown(introduction_text, mathjax=True),
+        dcc.Markdown(edgevsbulk_text, mathjax=True),
+        dcc.Markdown(thermopower_text, mathjax=True),
+        dcc.Markdown(cases_text, mathjax=True),
         dbc.Row(
             [
                 dbc.Col(html.Div(
                     [
                         dcc.Graph(
                             id='system-graph',
-                                config={
-                                    'displayModeBar': False
-                                }
+                            config={
+                                'displayModeBar': False
+                            },
+                            mathjax=True
                         )
                     ]
                 ), style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'})
@@ -85,7 +85,7 @@ app.layout = html.Div(
                 dbc.Col(html.Div(
                     [
                         dcc.Graph(
-                            id='graph-with-slider', 
+                            id='graph-with-slider', mathjax=True,
                         ),
                         dcc.Dropdown(
                             id='slider-dropdown',
@@ -135,7 +135,7 @@ app.layout = html.Div(
                 dbc.Col(html.Div(
                     [
                         dcc.Graph(
-                            id='wavefunc-graph',
+                            id='wavefunc-graph', mathjax=True
                         ),
                         dcc.Dropdown(
                             id='wavefunc-dropdown',
@@ -165,7 +165,7 @@ app.layout = html.Div(
                 dbc.Col(html.Div(
                     [
                         dcc.Graph(
-                            id='diffusion-thermopower-graph',
+                            id='diffusion-thermopower-graph', mathjax=True
                         )
                     ]
                 ))
@@ -176,13 +176,12 @@ app.layout = html.Div(
                 dbc.Col(html.Div(
                     [
                         dcc.Graph(
-                            id='diffusion-thermopower-2-graph',
+                            id='diffusion-thermopower-2-graph', mathjax=True
                         )
                     ]
                 ))
             ]
-        ),
-        mathjax_script
+        )
     ]
 )
 
